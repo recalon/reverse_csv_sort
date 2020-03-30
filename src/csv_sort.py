@@ -1,8 +1,20 @@
 import csv
-import os
+import time
+
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
 
 
-app_dir = "/tmp/reverse_string_sort/"
+app_dir = "/reverse_csv_sort/"
+
+
+def handle_csv(event):
+    filename = event.src_path.split("/")[-1]
+    print(f"{filename}")
+
+    csv_sorted = sort_csv(filename)
+
+    write_to_output_files(csv_sorted, *build_export_filenames(filename))
 
 
 def build_export_filenames(fn):
@@ -31,7 +43,7 @@ def build_export_filenames(fn):
     ]
 
 
-def write_to_output_files(data, filename_flat, filename_lines):
+def write_to_output_files(data, filename_lines, filename_flat):
     """Build absolute paths for output files"""
     out_path_lines = f"{app_dir}out/{filename_lines}"
     out_path_flat = f"{app_dir}out/{filename_flat}"
@@ -47,42 +59,41 @@ def write_to_output_files(data, filename_flat, filename_lines):
         csv_w = csv.writer(o_f)
         csv_w.writerow(sorted(sum(data, []), reverse=True))
 
-    print(f"processed {filename}")
+
+def sort_csv(file):
+    sorted_rows = []
+    in_path = f"{app_dir}in/{file}"
+
+    with open(in_path, "r") as i_f:
+        csv_r = csv.reader(i_f)
+        for f_row in csv_r:
+            sorted_rows.append(sorted(f_row, reverse=True))
+
+    return sorted_rows
 
 
 if __name__ == "__main__":
-    """Header"""
-    print("\n\n\n============\nStart sort\n============")
+    print("starting script")
+    listener = PatternMatchingEventHandler(
+        "*",
+        ".gitignore"
+    )
+    print("listener created")
 
-    """Load files for processing from the input directory"""
-    filenames = os.listdir(f"{app_dir}in/")
+    listener.on_created = handle_csv
+    listener.on_modified = handle_csv
+    print("listener configured")
 
-    """Check that there are files at all"""
-    if not filenames:
-        print(f"Script requires CSV files to have been placed in {app_dir}in/ from data/inputs.")
-        # no need for an exit condition - the rest of the code will not execute without filenames
+    fs_observer = Observer()
+    fs_observer.schedule(listener, f"{app_dir}/in")
+    print("observer created, starting")
 
-    """Process CSVs for sorting"""
-    for filename in filenames:
-        print(f"processing {filename}...")
+    fs_observer.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        fs_observer.stop()
+        fs_observer.join()
 
-        if filename.startswith(".git"):
-            print(f"file {filename} is a git file; skipping...")
-            continue
-
-        """Sort rows in input CSV"""
-        sorted_rows = []
-        in_path = f"{app_dir}in/{filename}"
-        try:
-            with open(in_path, "r") as i_f:
-                csv_r = csv.reader(i_f)
-                for f_row in csv_r:
-                    sorted_rows.append(sorted(f_row, reverse=True))
-        except FileNotFoundError as e:
-            print(f"{e}\n{filename} input missing; skipping")
-            continue
-
-        """Parse input filename into output filename bases"""
-        formatted_filename_lines, formatted_filename_flat = build_export_filenames(filename)
-
-        write_to_output_files(sorted_rows, formatted_filename_flat, formatted_filename_lines)
+    print("exiting")

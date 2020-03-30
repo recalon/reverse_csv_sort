@@ -1,0 +1,11 @@
+version: "3.7"
+
+services:
+  app:
+    build: .
+
+    command: supervisord -c /reverse_csv_sort/supervisord/supervisord_reverse_csv_sort.conf
+
+    volumes:
+      - './data/inputs:/reverse_csv_sort/in'
+      - './data/outputs:/reverse_csv_sort/out'

@@ -1,13 +1,16 @@
-FROM python:3 as intermediate
+FROM alpine:3.11
 
-RUN mkdir /tmp/reverse_string_sort /tmp/reverse_string_sort/in /tmp/reverse_string_sort/out
+RUN apk --update upgrade
+RUN apk update && apk add --no-cache inotify-tools
+RUN apk update && apk add --no-cache supervisor
+RUN pip3 install watchdog
 
-WORKDIR /tmp/reverse_string_sort
+RUN mkdir /reverse_csv_sort /reverse_csv_sort/in /reverse_csv_sort/out /reverse_csv_sort/log /reverse_csv_sort/supervisord
 
+WORKDIR /reverse_csv_sort
+
+ADD src/supervisord_reverse_csv_sort.conf supervisord
 ADD src/csv_sort.py .
-ADD data/inputs in
+RUN chmod 750 csv_sort.py
 
-RUN chmod -R 755 .
-RUN chmod -R 777 out
-
-CMD ["python", "csv_sort.py"]
+CMD ./run.sh
