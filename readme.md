@@ -5,14 +5,14 @@ as it pertains to Docker containers.
 
 ## How to use
 
-To run the application place all CSVs to be sorted in the `data/inputs` directory, then run `execute.sh`.
+To run the service, from the project root directory run `docker-compose up -d`. To rebuild the app with changes to the
+processor run with the `--build` flag. Once the service is running copying CSV files into the input directory 
+`data/inputs` or saving edits to files already in the input directory will trigger the sorting logic.
 
-On a Windows 
-system you will need to run the bash script from a Docker Terminal session, and the code should live somewhere inside 
-your C:\Users directory to play nicely with Docker (developed against Docker Toolbox due to lack of Docker Desktop).
+This application was developed without access to Docker Desktop for Windows. It has only been tested for *nix systems.
 
 ## Outputs
 
-The application will give 2 output files for each input file. One output will have reverse-**sorted and preserved** 
-lines, and are identifiable by the "_sorted_lines" suffix in the filename's first dot-separated component. The other 
-output will be **flattened to a single line and sorted** in reverse.
+The application will produce 2 output files into the `data/outputs` directory for each input file processed. One output
+will have reverse-**sorted and preserved** lines, and are identifiable by the "_sorted_lines" suffix in the filename's 
+first dot-separated component. The other output will be **flattened to a single line and sorted** in reverse.
