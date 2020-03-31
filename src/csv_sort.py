@@ -8,13 +8,29 @@ from watchdog.events import PatternMatchingEventHandler
 app_dir = "/reverse_csv_sort/"
 
 
-def handle_csv(event):
-    filename = event.src_path.split("/")[-1]
-    print(f"{filename}")
+def handle_new(event):
+    path, file = event.src_path.rsplit("/", 1)
 
+    print(f"path: {path}   file: {file}")
+
+    handle_csv(file)
+
+
+def handle_modify(event):
+    if type(event) is not "FileModifiedEvent":
+        return
+    print(f"modify event: {event}")
+
+
+def handle_csv(filename):
     csv_sorted = sort_csv(filename)
 
     write_to_output_files(csv_sorted, *build_export_filenames(filename))
+
+
+def do_nothing(event):
+    print(f"doing nothing with {event}")
+    return None
 
 
 def build_export_filenames(fn):
@@ -44,6 +60,9 @@ def build_export_filenames(fn):
 
 
 def write_to_output_files(data, filename_lines, filename_flat):
+    if not data:
+        return
+
     """Build absolute paths for output files"""
     out_path_lines = f"{app_dir}out/{filename_lines}"
     out_path_flat = f"{app_dir}out/{filename_flat}"
@@ -61,13 +80,17 @@ def write_to_output_files(data, filename_lines, filename_flat):
 
 
 def sort_csv(file):
+    print()
     sorted_rows = []
     in_path = f"{app_dir}in/{file}"
 
-    with open(in_path, "r") as i_f:
-        csv_r = csv.reader(i_f)
-        for f_row in csv_r:
-            sorted_rows.append(sorted(f_row, reverse=True))
+    try:
+        with open(in_path, "r+") as i_f:
+            csv_r = csv.reader(i_f)
+            for f_row in csv_r:
+                sorted_rows.append(sorted(f_row, reverse=True))
+    except FileNotFoundError as e:
+        print(f"{e}\nfile {file} not found; skipping")
 
     return sorted_rows
 
@@ -80,8 +103,10 @@ if __name__ == "__main__":
     )
     print("listener created")
 
-    listener.on_created = handle_csv
-    listener.on_modified = handle_csv
+    listener.on_moved = do_nothing
+    listener.on_deleted = do_nothing
+    listener.on_created = handle_new
+    listener.on_modified = handle_modify
     print("listener configured")
 
     fs_observer = Observer()
